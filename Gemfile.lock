@@ -1,0 +1,37 @@
+--- 
+hash: 6f8a0e1ee2d34d70b1ed3bb2e8482639e254e39d
+sources: 
+- Rubygems: 
+    uri: http://rubygems.org
+specs: 
+- crack: 
+    version: 0.1.6
+- eventmachine: 
+    version: 0.12.10
+- hashie: 
+    version: 0.2.1
+- httparty: 
+    version: 0.5.2
+- json: 
+    version: 1.4.3
+- oauth: 
+    version: 0.4.1
+- yajl-ruby: 
+    version: 0.7.6
+- twitter: 
+    version: 0.9.8
+- twitter-stream: 
+    version: 0.1.6
+dependencies: 
+  twitter: 
+    version: ~> 0.9.8
+    group: 
+    - :default
+  twitter-stream: 
+    version: ~> 0.1.6
+    group: 
+    - :default
+  json: 
+    version: ~> 1.4.3
+    group: 
+    - :default
