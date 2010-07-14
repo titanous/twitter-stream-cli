@@ -1,1 +1,27 @@
 = twitter-stream-cli
+
+Format strings
+
+%% - literal %
+* %c - geo coordinates, comma separated. ex: 40.83089,-73.90535
+* %C - place id
+* %t - status text
+* %s - source. ex: <a href=\"http://ubertwitter.com\" rel=\"nofollow\">UberTwitter</a>
+* %i - in_reply_to_status_id
+* %I - status id
+* %r - in_reply_to_screen_name
+* %R - in_reply_to_user_id
+* %d - created_at in JSON format. ex: Mon Jul 12 01:47:45 +0000 2010
+* %D - created_at in unix epoch format
+
+### User info
+* %u - screen name
+* %U - user id
+* %n - name
+* %N - description
+* %l - location
+* %L - url
+* %p - profile image url
+* %f - follower count
+* %F - following count
+* %S - statuses count

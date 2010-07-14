@@ -1,0 +1,108 @@
+#!/usr/bin/env ruby
+
+require 'time'
+require 'optparse'
+require 'json'
+require 'open-uri'
+require 'cgi'
+require 'twitter/json_stream'
+
+@options = {}
+@opts = OptionParser.new do |opts|
+  opts.banner = "Usage: #$0 options"
+
+  opts.on('-u', '--user=USER', String, 'Twitter username') { |v| @options[:username] = v }
+  opts.on('-p', '--password=PASSWORD', String, 'Twitter password') { |v| @options[:password] = v }
+  opts.on('-t', '--track=KEYWORDS', Array, 'Comma separated list of keywords to track') { |v| @options[:keywords] = v }
+  opts.on('-f', '--follow=USERS', Array, 'Comma separated list of usernames to track') do |v|
+    @options[:userids] = v.map do |u|
+      res = open("http://api.twitter.com/1/users/show.json?screen_name=#{u}").read 
+      JSON.parse(res)['id']
+    end
+  end
+  opts.on('-s', '--sample', 'Show a random sample of the firehose. Overrides -t and -f') { |v| @options[:sample] = true }
+  opts.on('-o', '--format=FORMAT_STRING', String, 'Use a format string for output (defaults to user: status with keyword highlighting)') { |v| @options[:format_string] = v }
+
+  opts.on_tail('-h', '--help', 'Display this message') do
+    puts opts
+    exit
+  end
+
+  if !ARGV.first
+    puts opts
+    exit
+  end
+end
+@opts.parse!
+
+@options[:username] ||= ENV['TWITTER_USER']
+@options[:password] ||= ENV['TWITTER_PASS']
+
+raise ArgumentError, "Username or password not specified\n" + @opts.help unless @options[:username] && @options[:password]
+
+def stream_options
+  if @options[:sample]
+    'sample.json'
+  else
+    raise ArgumentError, "At least one of -t,-f,-s must be specified\n" + @opts.help unless @options[:keywords] || @options[:userids]
+    path = 'filter.json?'
+    path += "track=#{CGI.escape(@options[:keywords].join(','))}" if @options[:keywords]
+    path += "&follow=#{@options[:userids].join(',')}" if @options[:userids]
+    path
+  end
+end
+
+def format_status(status)
+  formatted_string = @options[:format_string]
+  if formatted_string
+    formatted_string = formatted_string.split('%')
+    formatted_string.delete('')
+
+    formatted_string.map! do |str|
+      replacement = case str[0,1]
+      when 't' then status['text']
+      when 'u' then status['user']['screen_name']
+      when 'U' then status['user']['id']
+      when 'n' then status['user']['name']
+      when 'N' then status['user']['description']
+      when 'I' then status['id']
+      when 'i' then status['in_reply_to_status_id']
+      when 'r' then status['in_reply_to_screen_name']
+      when 'R' then status['in_reply_to_user_id']
+      when 'd' then status['created_at']
+      when 'D' then Time.parse(status['created_at']).to_i
+      when 'l' then status['user']['location']
+      when 'L' then status['user']['url']
+      when 'p' then status['user']['profile_image_url']
+      when 'f' then status['user']['followers_count']
+      when 'F' then status['user']['friends_count']
+      when 's' then status['source']
+      when 'S' then status['user']['statuses_count']
+      when 'c' then status['geo']['coordinates'].join(',') rescue 'nil'
+      when 'C' then status['place']['id'] rescue 'nil'
+      else str[0,1]
+      end
+      replacement.to_s + str[1..-1]
+    end.join('')
+  else
+    status['text'].gsub! /(#{@options[:keywords].join('|')})/i, "\e[4m\1\e[0m" if @options[:keywords]
+    "\e[1m#{status['user']['screen_name']}:\e[0m #{status['text']}"
+  end
+end
+
+EventMachine.run do
+  stream = Twitter::JSONStream.connect(
+    :path => '/1/statuses/' + stream_options,
+    :auth => "#{@options[:username]}:#{@options[:password]}",
+    :ssl  => true
+  )
+
+  stream.each_item do |item|
+    status = JSON.parse(item)
+    puts format_status(status)
+  end
+
+  stream.on_error { |message| puts message }
+
+  trap('INT') { EM.stop_event_loop } # Ctrl-C
+end
