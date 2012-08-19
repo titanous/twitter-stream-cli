@@ -82,7 +82,7 @@ def format_status(status)
       when 'c' then status['geo']['coordinates'].join(',') rescue ''
       when 'C' then status['place']['id'] rescue ''
       when '%' then '%'
-      else raise ArgumentError, 'Invalid format flag: %' + byte.inspect
+      else raise ArgumentError, 'Invalid format flag: %' + byte
       end
       output << formatted.to_s
       break output << scanner.rest unless scanner.check_until(/%/)
