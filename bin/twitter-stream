@@ -28,16 +28,12 @@ require 'twitter/json_stream'
     puts opts
     exit
   end
-
-  if !ARGV.first
-    puts opts
-    exit
-  end
 end
 @opts.parse!
 
 @options[:username] ||= ENV['TWITTER_USER']
 @options[:password] ||= ENV['TWITTER_PASS']
+@options[:sample] = true unless @options[:keywords] || @options[:userids]
 
 raise ArgumentError, "Username or password not specified\n" + @opts.help unless @options[:username] && @options[:password]
 
@@ -45,7 +41,6 @@ def stream_options
   if @options[:sample]
     'sample.json'
   else
-    raise ArgumentError, "At least one of -t,-f,-s must be specified\n" + @opts.help unless @options[:keywords] || @options[:userids]
     path = 'filter.json?'
     path += "track=#{CGI.escape(@options[:keywords].join(','))}" if @options[:keywords]
     path += "&follow=#{@options[:userids].join(',')}" if @options[:userids]
@@ -102,7 +97,8 @@ EventMachine.run do
 
   stream.each_item do |item|
     status = JSON.parse(item)
-    puts format_status(status)
+    next if status['delete']
+    puts format_status(status).gsub(/\n/, ' ')
   end
 
   stream.on_error { |message| puts message }
